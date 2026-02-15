@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粤西四日游 · 手绘行程地图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "华文楷体", "KaiTi", "SimSun", "宋体", "NSimSun", "Times New Roman", serif;
+        }
+        body {
+            background: #d9c8a9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .map-container {
+            max-width: 1100px;
+            width: 100%;
+            background: #fef6e6;
+            background-image: 
+                linear-gradient(#e8d9c0 1px, transparent 1px),
+                linear-gradient(90deg, #e8d9c0 1px, transparent 1px);
+            background-size: 30px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 2px #b59d7a inset;
+            border-radius: 32px 32px 20px 20px;
+            padding: 30px 20px 20px 20px;
+            position: relative;
+        }
+        /* 仿手绘标题 */
+        .map-title {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 500;
+            letter-spacing: 6px;
+            color: #3d2b1a;
+            margin-top: -10px;
+            margin-bottom: 20px;
+            font-family: "华文楷体", "KaiTi", "SimSun", serif;
+            text-shadow: 2px 2px 0 #e9d6b0;
+            position: relative;
+        }
+        .map-title span {
+            display: inline-block;
+            background: #fef6e6;
+            padding: 0 30px;
+            border-radius: 60px;
+            border: 2px solid #b59d7a;
+            line-height: 1.4;
+            box-shadow: 0 4px 0 #8b7656;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #5f4e37;
+            border-bottom: 2px dashed #b59d7a;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        .day-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1.2rem;
+        }
+        .day-badge::before {
+            content: "●";
+            font-size: 1.6rem;
+            line-height: 1;
+        }
+        .day1::before { color: #b1560f; } /* 深橙 */
+        .day2::before { color: #2f7a4c; } /* 森林绿 */
+        .day3::before { color: #2a6f97; } /* 深蓝 */
+        .day4::before { color: #8b5f8c; } /* 紫灰 */
+
+        /* 画布区: 手绘地图主视觉 */
+        .map-canvas {
+            position: relative;
+            width: 100%;
+            min-height: 650px;
+            background: transparent;
+            margin-bottom: 20px;
+            /* 手绘的固定比例尺感觉 */
+        }
+
+        /* 路线绘制 —— 用绝对定位 + 旋转小段模拟手绘连线 */
+        .route-line {
+            position: absolute;
+            background: transparent;
+            border-style: dashed;
+            border-width: 3px;
+            border-color: #a6611a;
+            transform-origin: 0 0;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            color: #3d2b1a;
+            padding-left: 10px;
+            height: 3px;
+            z-index: 5;
+        }
+        /* 手绘地点卡片 */
+        .spot {
+            position: absolute;
+            background: #fffcf0;
+            border: 2px solid #aa7e5a;
+            border-radius: 30px 30px 30px 8px;
+            box-shadow: 5px 5px 0 #bba88f;
+            padding: 10px 15px;
+            min-width: 160px;
+            font-size: 1rem;
+            line-height: 1.4;
+            transition: 0.1s;
+            z-index: 20;
+            font-family: "华文楷体", "KaiTi", "SimSun", serif;
+        }
+        .spot strong {
+            font-size: 1.2rem;
+            display: block;
+            border-bottom: 1px dotted #b59d7a;
+            margin-bottom: 5px;
+            color: #3b281a;
+        }
+        .spot-icon {
+            font-size: 1.6rem;
+            float: left;
+            margin-right: 8px;
+        }
+        .day1-spot { border-left: 8px solid #b1560f; }
+        .day2-spot { border-left: 8px solid #2f7a4c; }
+        .day3-spot { border-left: 8px solid #2a6f97; }
+        .day4-spot { border-left: 8px solid #8b5f8c; }
+
+        /* 图例和备注 */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 3px double #aa7e5a;
+            justify-content: center;
+            font-size: 1rem;
+            color: #3d2b1a;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #b1560f;
+        }
+        .legend-dot.day2 { background: #2f7a4c; }
+        .legend-dot.day3 { background: #2a6f97; }
+        .legend-dot.day4 { background: #8b5f8c; }
+        .legend-line {
+            width: 40px;
+            height: 4px;
+            background: #a6611a;
+            border-radius: 4px;
+        }
+        .legend-line.dash {
+            background: none;
+            border-bottom: 4px dashed #a6611a;
+        }
+        .stamp {
+            font-size: 2rem;
+            opacity: 0.2;
+            transform: rotate(-10deg);
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            font-family: "华文楷体", serif;
+            color: #6b4f33;
+            border: 3px double #6b4f33;
+            padding: 0 20px;
+            border-radius: 50px;
+            pointer-events: none;
+        }
+        .coffee-note {
+            position: absolute;
+            bottom: -10px;
+            left: 20px;
+            font-size: 0.9rem;
+            color: #917b60;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<div class="map-container">
+    <div class="map-title">
+        <span>✧ 江 门 · 恩 平 · 赤 坎 ✧</span>
+    </div>
+    <div class="subtitle">
+        <div class="day-badge day1">2月21日·深圳→江门</div>
+        <div class="day-badge day2">2月22日·恒大泉都</div>
+        <div class="day-badge day3">2月23日·赤坎古镇</div>
+        <div class="day-badge day4">2月24日·返程</div>
+    </div>
+
+    <!-- 手绘地图核心区域 (固定尺寸相对定位) -->
+    <div class="map-canvas" style="position: relative; height: 780px;">
+
+        <!-- 地点: 深圳起点 (第1天) -->
+        <div class="spot day1-spot" style="top: 30px; left: 30px;">
+            <span class="spot-icon">🏙️</span>
+            <strong>深圳 · 出发</strong>
+            8:30 经深中通道<br>
+            <span style="font-size:0.85rem;">Day1 起点</span>
+        </div>
+
+        <!-- 深中通道示意 (短线) -->
+        <div style="position: absolute; top: 90px; left: 165px; font-size:1rem; background:#fff2d7; padding:2px 8px; border-radius:20px; border:1px solid #aa7e5a; z-index:15;">深中通道</div>
+        <div style="position: absolute; top: 120px; left: 190px; width: 120px; height: 2px; background: #a6611a; transform: rotate(10deg); z-index:4; opacity:0.6;"></div>
+
+        <!-- 江门市区 山水富丽华酒店 -->
+        <div class="spot day1-spot" style="top: 160px; left: 250px;">
+            <span class="spot-icon">🏨</span>
+            <strong>江门山水富丽华</strong>
+            入住·休整<br>近市区
+        </div>
+
+        <!-- 小鸟天堂 游船 -->
+        <div class="spot day1-spot" style="top: 280px; left: 380px;">
+            <span class="spot-icon">🐦</span>
+            <strong>小鸟天堂</strong>
+            14:00-16:00 游船 ¥60
+        </div>
+
+        <!-- 陈皮村 -->
+        <div class="spot day1-spot" style="top: 400px; left: 460px;">
+            <span class="spot-icon">🍊</span>
+            <strong>新会陈皮村</strong>
+            免费·陈皮糖DIY
+        </div>
+
+        <!-- 返回酒店 (虚线) -->
+        <div style="position: absolute; top: 200px; left: 330px; width: 100px; height: 2px; border-bottom: 3px dashed #a6611a; z-index:4; transform: rotate(30deg);"></div>
+
+        <!-- 第一天晚餐标注 (浮动) -->
+        <div style="position: absolute; top: 240px; left: 180px; background: #fff0d4; padding:6px 12px; border-radius: 30px; border:1px solid #bc8f6b; font-size:0.95rem; z-index:10; box-shadow:2px 2px 0px #b59d7a;">🍚 黄鳝饭·古井烧鹅</div>
+
+        <!-- 第二天 恒大泉都方向 新路线用绿色 -->
+        <!-- 江门至恒大泉都 路线 -->
+        <div style="position: absolute; top: 150px; left: 280px; width: 220px; height: 2px; border-bottom: 4px dashed #2f7a4c; z-index:6; transform: rotate(5deg); opacity:0.9;"></div>
+
+        <!-- 恒大泉都 古汤源度假 -->
+        <div class="spot day2-spot" style="top: 100px; left: 500px;">
+            <span class="spot-icon">♨️</span>
+            <strong>恒大泉都·古汤源</strong>
+            10:30 抵达 · 入住
+        </div>
+
+        <!-- 花海欢乐世界 -->
+        <div class="spot day2-spot" style="top: 20px; left: 630px;">
+            <span class="spot-icon">🌸</span>
+            <strong>花海欢乐世界</strong>
+            13:30-15:30 儿童乐园/拍照
+        </div>
+
+        <!-- 五国温泉 -->
+        <div class="spot day2-spot" style="top: 180px; left: 700px;">
+            <span class="spot-icon">🛁</span>
+            <strong>五国温泉</strong>
+            15:30-17:30 鱼疗/戏水池<br>夜泡20:00
+        </div>
+
+        <!-- 崖门镇晚餐可选 -->
+        <div style="position: absolute; top: 280px; left: 650px; background: #e1f0da; padding:5px 12px; border-radius: 40px; border:2px solid #3f7652; font-size:0.9rem;">🍽️ 崖门镇晚餐</div>
+
+        <!-- 第三天路线 赤坎 蓝色 -->
+        <!-- 恒大泉都→赤坎 线 -->
+        <div style="position: absolute; top: 190px; left: 710px; width: 150px; height: 2px; border-bottom: 4px dashed #2a6f97; transform: rotate(-15deg); z-index:7; opacity:0.9;"></div>
+
+        <!-- 赤坎古镇 大本营 -->
+        <div class="spot day3-spot" style="top: 260px; left: 820px;">
+            <span class="spot-icon">🏯</span>
+            <strong>赤坎古镇</strong>
+            10:30抵达·入住古镇内
+        </div>
+
+        <!-- 铛铛车 -->
+        <div class="spot day3-spot" style="top: 370px; left: 900px;">
+            <span class="spot-icon">🚂</span>
+            <strong>铛铛车环游</strong>
+            ¥50-80 13:30-14:30
+        </div>
+
+        <!-- 摇橹船 -->
+        <div class="spot day3-spot" style="top: 480px; left: 830px;">
+            <span class="spot-icon">🛶</span>
+            <strong>摇橹船游河</strong>
+            ¥30-50 14:30-15:30
+        </div>
+
+        <!-- 骑楼夜景 蜡染体验 -->
+        <div style="position: absolute; top: 570px; left: 800px; background: #f0e1d0; padding:8px 16px; border-radius: 60px; border:2px solid #8b5f8c; font-size:1rem; white-space:nowrap;">🌃 堤西路骑楼夜景·蜡染</div>
+
+        <!-- 第四天返程 紫色线 赤坎→深圳 -->
+        <div style="position: absolute; top: 450px; left: 850px; width: 400px; height: 2px; border-bottom: 4px dashed #8b5f8c; transform: rotate(-25deg); z-index:8; opacity:0.8;"></div>
+        <div style="position: absolute; top: 590px; left: 620px; background: #f2e3ff; padding:4px 15px; border-radius: 30px; border:2px solid #8b5f8c; font-size:0.95rem; z-index:25;">🛣️ 沈海高速 + 深中通道</div>
+
+        <!-- 返程终点 深圳 -->
+        <div class="spot day4-spot" style="top: 640px; left: 250px;">
+            <span class="spot-icon">🏡</span>
+            <strong>深圳 · 返抵</strong>
+            16:00 到达
+        </div>
+
+        <!-- 一些手绘小点缀 山/温泉标志 -->
+        <div style="position: absolute; top: 340px; left: 550px; font-size:2.5rem; opacity:0.25; transform:rotate(5deg);">♨️</div>
+        <div style="position: absolute; top: 520px; left: 430px; font-size:3rem; opacity:0.15;">⛰️</div>
+        <div style="position: absolute; top: 50px; left: 380px; font-size:2rem; opacity:0.2;">🌿</div>
+
+        <!-- 新华字典风格 文字点缀 -->
+        <div style="position: absolute; bottom: 40px; left: 120px; font-size: 0.9rem; background: white; border:1px solid #c5b097; padding:4px 10px; border-radius: 12px; box-shadow:1px 1px 0 #aa7e5a;">📖 新华字典·字体韵味</div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot"></span> 第一天 深圳→江门</div>
+        <div class="legend-item"><span class="legend-dot day2"></span> 第二天 恒大泉都</div>
+        <div class="legend-item"><span class="legend-dot day3"></span> 第三天 赤坎古镇</div>
+        <div class="legend-item"><span class="legend-dot day4"></span> 第四天 返程</div>
+        <div class="legend-item"><span class="legend-line"></span> 行车路线</div>
+        <div class="legend-item"><span class="legend-line dash"></span> 行程路线(虚线)</div>
+    </div>
+
+    <!-- 每日贴士 手写感 -->
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 24px; gap: 10px; background: #ecdcc0; padding: 16px; border-radius: 50px 20px 50px 20px; font-size: 0.95rem;">
+        <div style="border-right: 1px solid #aa7e5a; padding-right: 15px;"><span style="color:#b1560f;">Day1</span> 小鸟天堂·陈皮村·黄鳝饭</div>
+        <div style="border-right: 1px solid #aa7e5a; padding-right: 15px;"><span style="color:#2f7a4c;">Day2</span> 花海世界·五国温泉·夜泡</div>
+        <div style="border-right: 1px solid #aa7e5a; padding-right: 15px;"><span style="color:#2a6f97;">Day3</span> 铛铛车·摇橹船·骑楼夜景</div>
+        <div><span style="color:#8b5f8c;">Day4</span> 晨游赤坎·煲仔饭·返深</div>
+    </div>
+
+    <!-- 仿古印章 -->
+    <div class="stamp">粤 游 记 忆</div>
+    <div class="coffee-note">✎ 手绘路线· 2026年2月 春</div>
+</div>
+<!-- 额外注释：所有中文采用宋体/楷体 类似新华字典字感 -->
+</body>
+</html>
